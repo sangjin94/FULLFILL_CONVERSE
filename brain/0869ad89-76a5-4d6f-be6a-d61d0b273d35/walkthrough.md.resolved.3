@@ -1,0 +1,33 @@
+# PDA Return System Updates - Walkthrough
+
+## New Features Added
+
+### 1. Default Quantity Adjustment
+- The "정상수량" (Normal Quantity) input field in the worker's PDA Scan view now defaults to **1**. 
+- Whenever a barcode is scanned and the product is confirmed, the input box automatically resets to `1` (and `0` for defective), allowing the worker to process items faster with fewer clicks.
+
+### 2. Automated Location (Cell) Assignment
+The system now allows Master Administrators to automatically map a list of physical warehouse cells to the products with the highest expected returns.
+
+- **[models.py](file:///c:/Users/dkstk/.gemini/antigravity/models.py) Update**: Added the `fixed_cell` column to [ProductMaster](file:///c:/Users/dkstk/.gemini/antigravity/models.py#5-13). *(Note: this required recreating the SQLite database.)*
+- **New Master Dashboard Tab "로케이션 배정"**: 
+    - Lists all products aggregated by their total `expected_qty` across all registered stores.
+    - Sorting is applied in descending order (highest return volume first).
+- **Excel Upload for Cell Selection**:
+    - By clicking the **"로케이션(셀) 명단 업로드 (엑셀)"** button, the Master Administrator can upload a simple Excel file. 
+    - The first column (Column A) of this Excel file should contain the names of available locations/cells in the warehouse (e.g., A-01, A-02, B-05).
+    - The system will read this list and assign the first cell to the #1 ranked item, the second cell to the #2 ranked item, and so on.
+    - View the mapping results live directly in the dashboard table.
+
+## How to Test the Flow
+
+1. **Re-initialize the System**: Since the Database was reset to add the `fixed_cell` column, please upload your `상품 마스터` (Master) Excel file and `반품예정리스트` (Return Plan) Excel file again.
+2. **Review Aggregation**: 
+    - Go to the `로케이션 배정` (Location Assignment) tab in the Master view.
+    - Confirm you see products ranked by "총 누적 예정수량" (Total Expected Qty). At this point, the "고정 배정 로케이션" column will show "미배정" (Unassigned).
+3. **Upload Cells**:
+    - Create a test excel file with cell names in the first column (e.g., A1, A2, A3) and click **로케이션 명단 업로드**.
+    - Verify that the cells are mapped 1:1 to the top-ranked items in the table.
+4. **Test Scanning**:
+    - Switch role to "현장 작업자" (Worker), pick a store, and scan any valid barcode. 
+    - The Normal Quantity should automatically be `1`. Hit Enter/Save to quickly process it!

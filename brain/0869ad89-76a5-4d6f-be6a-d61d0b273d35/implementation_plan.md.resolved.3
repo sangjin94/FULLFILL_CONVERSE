@@ -1,0 +1,14 @@
+# Plan: Default Quantity & Barcode Search Refinement
+
+## Goal
+1. When a user successfully scans a barcode, the default "정상수량" (Normal Quantity) should be automatically set to `1` instead of `0` to speed up the workflow.
+2. Verify / Refine the barcode search behavior. The user states "상품코드랑 바코드랑 다른거야 바코드로 검색할수있어야돼" - Currently, the API searches [(ProductMaster.barcode == barcode) | (ProductMaster.code == barcode)](file:///c:/Users/dkstk/.gemini/antigravity/database.py#17-23). We should ensure the frontend clearly treats the scanned input as a barcode and sends it to the API correctly. If there is a bug with the specific column upload, we will refine the upload mapping to ensure `SCAN_CODE` is correctly saved to `barcode` and `ITEM_CODE` is correctly saved to `code`.
+
+## Proposed Changes
+
+### Frontend ([templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html) & [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js))
+- **[MODIFY]** [templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html)
+  - Change `<input type="number" id="qty-normal" value="0" min="0">` to `value="1" min="0"`.
+- **[MODIFY]** [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js)
+  - Inside [submitScanData()](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js#227-273), ensure that when resetting the form after a successful scan, `qty-normal` is reset to `1`, not `0`.
+  - Inside [renderProductResult()](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js#199-221), maybe visually emphasize the matched barcode vs code if it helps clarify what was scanned.

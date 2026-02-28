@@ -1,0 +1,31 @@
+# Add Master Data and Return Plan Views
+
+This plan outlines the steps to allow the master manager to view the registered product master data and return plan data.
+
+## Proposed Changes
+
+### Backend ([main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py))
+- **[MODIFY]** [main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py)
+  - Add `GET /api/masters` endpoint to fetch [ProductMaster](file:///c:/Users/dkstk/.gemini/antigravity/models.py#5-12) records from the database.
+  - Add `GET /api/plans` endpoint to fetch [ReturnPlan](file:///c:/Users/dkstk/.gemini/antigravity/models.py#13-20) records, with an optional `store` query parameter to filter by store (similar to the scans endpoint).
+
+### Frontend ([templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html))
+- **[MODIFY]** [templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html)
+  - In the Master Dashboard (`#view-dashboard`), add a tab navigation menu to switch between three views: "스캔 내역" (Scan History), "상품 마스터" (Product Master), and "반품 예정 리스트" (Return Plan).
+  - Add table containers for the new "상품 마스터" and "반품 예정 리스트" views.
+
+### Frontend ([static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js))
+- **[MODIFY]** [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js)
+  - Add logic to handle switching between the dashboard tabs.
+  - Create `loadMasterData()` function to fetch data from `/api/masters` and render it into the product master table.
+  - Create `loadPlanData()` function to fetch data from `/api/plans` and render it into the return plan table.
+  - Update the initialization logic so that the default tab is active when the manager logs in.
+
+## Verification Plan
+
+### Local Verification
+1. Run the FastAPI server: `uvicorn main:app --reload`
+2. Open the browser and enter the system as a "마스터 관리자".
+3. Upload sample Excel files for the Product Master and Return Plan (if the database is currently empty).
+4. Click through the new tabs ("스캔 내역", "상품 마스터", "반품 예정 리스트").
+5. Verify that the correct data is fetched from the server and displayed cleanly in the tables for each tab.

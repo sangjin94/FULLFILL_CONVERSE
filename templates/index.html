@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDA 반품 관리 시스템</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="brand">ReturnManager +</div>
+            <div id="user-info" class="hidden">
+                <span id="current-store" style="margin-right:1rem;color:var(--accent-blue)"></span>
+                <button class="btn btn-danger" onclick="logout()">로그아웃</button>
+            </div>
+        </header>
+
+        <!-- 1. 로그인 / 역할 및 점포 선택 화면 -->
+        <main id="view-role-select" class="glass-panel" style="max-width: 400px; margin: 2rem auto;">
+            <h2 class="text-center">작업 시작</h2>
+            <p class="text-center" style="margin-bottom: 1.5rem;">역할과 점포를 선택해주세요.</p>
+
+            <div class="input-group">
+                <label>역할 선택</label>
+                <select id="select-role" class="input-control">
+                    <option value="worker">현장 작업자 (PDA 스캔)</option>
+                    <option value="master">마스터 관리자 (대시보드/데이터업로드)</option>
+                </select>
+            </div>
+
+            <div class="input-group" id="worker-name-group">
+                <label>작업자 이름</label>
+                <input type="text" id="input-worker-name" class="input-control" placeholder="이름 입력">
+            </div>
+
+            <div class="input-group">
+                <label>비밀번호</label>
+                <input type="password" id="input-password" class="input-control" placeholder="비밀번호 입력">
+            </div>
+
+            <div class="input-group" id="store-group">
+                <label>작업 점포</label>
+                <select id="select-store" class="input-control">
+                    <option value="">데이터를 불러오는 중입니다...</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%" onclick="enterSystem()">시스템 입장</button>
+        </main>
+
+        <!-- 2. PDA 스캔 작업 화면 (Worker) -->
+        <main id="view-scan" class="hidden">
+            <!-- 반품 예정 리스트 표시 영역 추가 -->
+            <div class="glass-panel" style="margin-bottom: 1rem;">
+                <h3>반품 예정 리스트 (<span id="plan-store-name"></span>)</h3>
+                <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>바코드/코드</th>
+                                <th>상품명</th>
+                                <th>예정수량</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plan-tbody">
+                            <tr>
+                                <td colspan="3" class="text-center">불러오는 중...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-panel" style="margin-bottom: 1rem;">
+                <h2>바코드 스캔</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="barcode-input" class="input-control" placeholder="바코드 스캐너 입력 또는 수동 입력"
+                        autofocus>
+                    <button class="btn btn-primary" onclick="handleScan()">스캔/조회</button>
+                </div>
+            </div>
+
+            <!-- 중복 상품 선택 영역 -->
+            <div id="duplicate-selection" class="glass-panel hidden"
+                style="margin-bottom: 1rem; border: 2px solid var(--accent-blue);">
+                <h3>여러 개의 상품이 검색되었습니다</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">해당 바코드를 사용하는 상품이 여러 개 있습니다. 알맞은 상품을
+                    선택해주세요.</p>
+                <div id="duplicate-list"
+                    style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                    <!-- 동적 생성 -->
+                </div>
+                <button class="btn btn-primary" style="width:100%" onclick="confirmDuplicateSelection()">선택 완료</button>
+            </div>
+
+            <!-- 스캔 결과 표시 영역 -->
+            <div id="scan-result" class="glass-panel hidden">
+                <h3>상품 확인</h3>
+                <div id="product-info" style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                    <!-- 상품 정보 동적 렌더링 -->
+                </div>
+
+                <div class="input-group">
+                    <label>검수 수량 입력 (정상 / 불량)</label>
+                    <div class="flex gap-4">
+                        <div style="flex:1">
+                            <span style="font-size:0.8rem;color:var(--accent-green)">정상수량</span>
+                            <input type="number" id="qty-normal" class="input-control" value="1" min="0">
+                        </div>
+                        <div style="flex:1">
+                            <span style="font-size:0.8rem;color:var(--accent-red)">불량수량</span>
+                            <input type="number" id="qty-defective" class="input-control" value="0" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>특이사항 (선택사항)</label>
+                    <textarea id="scan-notes" class="input-control" rows="2" placeholder="상품 파손 상태 등 메모 입력"></textarea>
+                </div>
+
+                <button class="btn btn-success" style="width:100%" onclick="submitScanData()">반품 처리 저장</button>
+            </div>
+        </main>
+
+        <!-- 3. 마스터 관리자 화면 (Dashboard) -->
+        <main id="view-dashboard" class="hidden">
+            <div class="flex justify-between items-center" style="margin-bottom:1rem;">
+                <h2>통합 관리 대시보드</h2>
+                <div class="flex gap-2">
+                    <button class="btn" onclick="loadDashboardData()">새로고침</button>
+                    <!-- 엑셀 데이터 업로드를 위한 버튼 -->
+                    <label class="btn btn-primary" style="margin:0; cursor:pointer;">
+                        상품마스터 업로드 (XLSX)
+                        <input type="file" class="hidden" id="upload-master" accept=".csv, .xlsx, .xls">
+                    </label>
+                    <label class="btn btn-primary" style="margin:0; cursor:pointer;">
+                        반품예정 업로드 (XLSX)
+                        <input type="file" class="hidden" id="upload-plan" accept=".csv, .xlsx, .xls">
+                    </label>
+                </div>
+            </div>
+
+            <!-- 탭 메뉴 -->
+            <div class="tabs"
+                style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                <button class="btn btn-primary" id="tab-all" onclick="switchDashboardTab('all')">전체 현황(All)</button>
+                <button class="btn" id="tab-store" onclick="switchDashboardTab('store')">점포별 상세</button>
+                <button class="btn" id="tab-master" onclick="switchDashboardTab('master')">상품 마스터 관리</button>
+                <button class="btn" id="tab-locations" onclick="switchDashboardTab('locations')">로케이션 배정</button>
+            </div>
+
+            <!-- 전체 현황 영역 (All) -->
+            <div id="dashboard-all" class="glass-panel dashboard-section" style="overflow-x: auto;">
+                <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+                    <h3>전체 통합 현황 (스캔 내역 & 반품 예정)</h3>
+                </div>
+
+                <div class="flex justify-between items-center" style="margin-bottom:0.5rem;">
+                    <h4 style="margin:0; color:var(--text-secondary);">전체 스캔 내역</h4>
+                    <button class="btn btn-success" style="padding: 0.3rem 0.8rem; font-size: 0.9rem;"
+                        onclick="downloadScansExcel()">엑셀 다운로드</button>
+                </div>
+                <table class="data-table" style="margin-bottom: 2rem;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>점포명</th>
+                            <th>상품 정보</th>
+                            <th>정상</th>
+                            <th>불량</th>
+                            <th>특이사항</th>
+                            <th>처리일시/작업자</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-scan-tbody">
+                        <tr>
+                            <td colspan="8" class="text-center">데이터가 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4 style="margin-bottom:0.5rem; color:var(--text-secondary);">전체 반품 예정 리스트</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>점포명</th>
+                            <th>상품코드</th>
+                            <th>상품명</th>
+                            <th>예정수량</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-plan-tbody">
+                        <tr>
+                            <td colspan="5" class="text-center">데이터가 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 점포별 상세 영역 -->
+            <div id="dashboard-store" class="glass-panel dashboard-section hidden" style="overflow-x: auto;">
+                <div class="flex gap-4 items-center"
+                    style="margin-bottom: 1rem; background: var(--bg-color); padding: 1rem; border-radius: 8px;">
+                    <h3 style="margin:0;">조회할 점포 선택: </h3>
+                    <select id="master-store-filter" class="input-control" style="width: 250px; margin:0;"
+                        onchange="loadStoreDetail()">
+                        <option value="">데이터를 불러오는 중입니다...</option>
+                    </select>
+                </div>
+
+                <h4 style="margin-bottom:0.5rem; color:var(--text-secondary);">해당 점포 스캔 내역</h4>
+                <table class="data-table" style="margin-bottom: 2rem;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>상품 정보</th>
+                            <th>정상</th>
+                            <th>불량</th>
+                            <th>특이사항</th>
+                            <th>처리일시/작업자</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="store-scan-tbody">
+                        <tr>
+                            <td colspan="7" class="text-center">점포를 선택해주세요.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4 style="margin-bottom:0.5rem; color:var(--text-secondary);">해당 점포 반품 예정 리스트</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>상품코드</th>
+                            <th>상품명</th>
+                            <th>예정수량</th>
+                        </tr>
+                    </thead>
+                    <tbody id="store-plan-tbody">
+                        <tr>
+                            <td colspan="4" class="text-center">점포를 선택해주세요.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 고정 로케이션 배정 영역 -->
+            <div id="dashboard-locations" class="glass-panel dashboard-section hidden" style="overflow-x: auto;">
+                <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+                    <h3>상품별 누적 예정수량 및 고정 로케이션</h3>
+                    <div class="flex gap-2 items-center">
+                        <label class="btn btn-success" style="margin:0; cursor:pointer;">
+                            로케이션(셀) 명단 업로드 (엑셀)
+                            <input type="file" class="hidden" id="upload-locations" accept=".csv, .xlsx, .xls">
+                        </label>
+                    </div>
+                </div>
+                <p style="color:var(--text-secondary); margin-bottom:1rem;">엑셀 파일을 업로드하면, A열 첫 번째부터 순서대로, 예정 수량이 가장 높은
+                    상품부터 1:1 자동 매칭 배정됩니다.</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>순위</th>
+                            <th>상품코드</th>
+                            <th>바코드</th>
+                            <th>상품명</th>
+                            <th>총 누적 예정수량</th>
+                            <th>고정 배정 로케이션(셀)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="locations-tbody">
+                        <tr>
+                            <td colspan="6" class="text-center">데이터가 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- 로직 스크립트 연결 추후 진행 -->
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>

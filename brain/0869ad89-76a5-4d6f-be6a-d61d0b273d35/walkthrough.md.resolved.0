@@ -1,0 +1,19 @@
+# Master Data View Features - Walkthrough
+
+## Changes Made
+- Added `GET /api/masters` endpoint to [main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py) to retrieve all registered [ProductMaster](file:///c:/Users/dkstk/.gemini/antigravity/models.py#5-12) records from the database.
+- Added `GET /api/plans` endpoint to [main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py) with optional store filtering to retrieve [ReturnPlan](file:///c:/Users/dkstk/.gemini/antigravity/models.py#13-20) records.
+- Modified the master dashboard view in [templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html) to include a navigation tab system.
+- Added dedicated tables to display the "등록된 상품 마스터" (Registered Product Master) and "반품 예정 리스트" (Return Plan List).
+- Updated [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js) with functions [loadMasterData()](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js#246-272) and [loadPlanList()](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js#273-301) to dynamically fetch data and populate the new tables.
+- Integrated the tab-switching logic to seamlessly move between the "스캔 내역" (Scan History) and the newly added views.
+
+## How to Test
+1. Make sure your local server is running step by reopening standard terminal or executing: `uvicorn main:app --reload`
+2. Open the page `http://localhost:8000` in your web browser.
+3. Select **"마스터 관리자" (Master Administrator)** as the role and click **"시스템 입장" (Enter System)**.
+4. On the Master Dashboard, you will now see three tabs at the top of the data panel:
+   - **스캔 내역 (Scan History)**
+   - **상품 마스터 (Product Master)**
+   - **반품 예정 리스트 (Return Plan List)**
+5. Click on each tab to confirm that the relevant data loaded from the database is displayed clearly in tabular format.

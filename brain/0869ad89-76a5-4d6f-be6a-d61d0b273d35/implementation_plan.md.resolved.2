@@ -1,0 +1,24 @@
+# Plan: Dynamic Store Selection & Return Plan Bugfixes
+
+## Goal
+1. Fix the issue where uploaded "Return Plan (반품예정리스트)" data is not saving / rendering properly.
+2. Ensure the "Store Selection" (`<select id="select-store">`) on the login screen dynamically displays only the stores that are currently present in the Return Plan database.
+
+## Proposed Changes
+
+### Backend ([main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py))
+- **[MODIFY]** [main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py)
+  - `POST /api/upload/plan`: 
+    - Adjust the Excel column parsing logic to be more flexible. For example, check for `'점포명'` if `'STORE_NAME'` is missing, `'상품코드'` if `'ITEM_CODE'` is missing, and `'수량'` or `'반품예정수량'` if `'ORDER_QUANTITY'` is missing. 
+    - Ensure empty rows or rows with `NaN` in key columns are safely ignored without crashing the whole upload.
+  - **[NEW]** `GET /api/stores`:
+    - Create a new endpoint that queries `models.ReturnPlan` and returns a list of unique `store_name`s currently in the database.
+
+### Frontend ([templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html) & [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js))
+- **[MODIFY]** [templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html)
+  - Remove hardcoded options (e.g., 강남점, 홍대점) from `<select id="select-store">`.
+  - Leave an empty state or a default placeholder.
+- **[MODIFY]** [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js)
+  - Add a function `loadAvailableStores()` that fetches from `/api/stores` on page load.
+  - Populate the `#select-store` dropdown dynamically.
+  - If the role selected is 'master', ensure "전체 (마스터 대시보드용)" is always available or appended to the list.

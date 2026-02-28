@@ -1,0 +1,33 @@
+# Duplicate Barcodes & Return Plan Bugfixes - Walkthrough
+
+## Changes Made
+### 1. Duplicate Barcode Support & Master Update Rules
+- **Database Schema**: Removed the `unique=True` constraint from `ProductMaster.barcode` and applied it to `ProductMaster.code` instead. This allows multiple products to share the exact same barcode but distinct codes.
+- **Backend APIs ([main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py))**:
+    - **`GET /api/products/{barcode}`**: Now returns an array of matched products rather than just the first one. 
+    - **`POST /api/upload/master`**: Changed the upload logic to check for existing items by **상품코드** (`code`) instead of `barcode`. If a code exists, it updates the record's name and barcode. If not, it adds a new row. The database is no longer wiped during uploads.
+- **Frontend ([app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js) & [index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html))**:
+    - Added a "Duplicate Product Selection Panel" inside the Worker UI (`#view-scan`).
+    - When a barcode corresponds to multiple products, the worker sees a list of matches with radio buttons, including info about expected quantities.
+    - After the worker selects the proper item, the quantity input section is shown as normal, and the specific `code` of the chosen item is passed to the server for the final scan record.
+
+### 2. Return Plan Upload Robustness & Dynamic Store Select
+- **Backend APIs ([main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py))**:
+    - **`POST /api/upload/plan`**: Improved Excel parsing logic. It no longer relies strictly on `STORE_NAME`, `ITEM_CODE`, and `ORDER_QUANTITY`. It will try to find fallbacks such as `점포명`, `상품코드`, `수량`, `점포`, `매장명` 등 다양한 한글 헤더값도 인식하도록 유연하게 수정했습니다.
+    - **`GET /api/stores`**: 새로 추가된 엔드포인트입니다. 방금 업로드된 반품예정리스트 DB 테이블([ReturnPlan](file:///c:/Users/dkstk/.gemini/antigravity/models.py#13-20))을 조회해 현재 들어가있는 고유 점포명 목록만 추출해 반환합니다.
+- **Frontend ([app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js) & [index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html))**:
+    - 로그인("작업 시작") 패널에 있던 하드코딩된 오프라인 지점(강남점, 홍대점 등) 옵션들을 제거했습니다.
+    - 페이지 로드 시 또는 "반품예정리스트" 파일을 업로드한 직후에 `/api/stores`를 호출하여 받아온 "실제 리스트에 존재하는" 점포들로만 드롭다운 메뉴(`<select id="select-store">`)를 구성합니다.
+
+## How to Test
+1. Restart the server: `uvicorn main:app --reload`
+2. **Master Administrator**:
+    - Upload an initial Product Master Excel file and verify duplications are handled.
+    - Upload your **반품 예정 리스트 (Return Plan) Excel** file.
+    - You should see an alert `"총 N건의 반품 예정 정보가 업로드되었습니다."`.
+    - Go to "반품 예정 리스트" tab and ensure data rows appeared correctly.
+3. **Store Selection Check**:
+    - Refresh the page `http://localhost:8000` (or `F5`).
+    - Under the role setup, change the role to "Worker(현장 작업자)".
+    - Click "작업 점포" dropdown and verify that *only* the stores existing in the previously uploaded Excel file are listed (plus "전체").
+    - Select one of your real stores, enter the PDA System, and verify the correct target return plan items are loaded in the queue.

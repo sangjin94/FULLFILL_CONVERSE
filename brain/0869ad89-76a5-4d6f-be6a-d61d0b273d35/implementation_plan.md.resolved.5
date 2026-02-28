@@ -1,0 +1,34 @@
+# Plan: Workflow Refinements & Location Assignment
+
+## Goal
+1. **Default Quantity**: When a user successfully scans a barcode, the default "정상수량" (Normal Quantity) should be automatically set to `1` instead of `0` to speed up the workflow.
+2. **Barcode Display Accuracy**: Clarify the UI to show exactly what barcode was scanned vs the internal product code, to reduce confusion.
+3. **Location (Cell) Assignment for High-Volume Returns**: Master administrators need a way to aggregate the total expected return quantities across all stores per product, and assign a "Fixed Cell" (고정 보관함/로케이션) for high-volume items to optimize warehouse placement.
+
+## Proposed Changes
+
+### Database Layer ([models.py](file:///c:/Users/dkstk/.gemini/antigravity/models.py))
+- **[MODIFY]** [models.py](file:///c:/Users/dkstk/.gemini/antigravity/models.py)
+  - Add a `fixed_cell` (String, nullable) column to [ProductMaster](file:///c:/Users/dkstk/.gemini/antigravity/models.py#5-12) to store the assigned warehouse location.
+
+### Backend ([main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py))
+- **[NEW]** `GET /api/aggregate-plans`
+  - Sums the `expected_qty` from all [ReturnPlan](file:///c:/Users/dkstk/.gemini/antigravity/models.py#13-20) entries, grouped by `product_code`.
+  - Joins with [ProductMaster](file:///c:/Users/dkstk/.gemini/antigravity/models.py#5-12) to attach `name` and `fixed_cell`.
+  - Returns a list sorted by `total_expected_qty` in descending order.
+- **[NEW]** `POST /api/upload/locations` (or similar)
+  - Accepts an Excel file containing a list of available 'Cell' (로케이션/보관함) names.
+  - Aggregates the return plans to find the top $N$ products by expected quantity.
+  - Automatically updates the `fixed_cell` column in [ProductMaster](file:///c:/Users/dkstk/.gemini/antigravity/models.py#5-12) by mapping the highest quantity products to the uploaded cells in order.
+  - (Optional) `PUT` endpoint for manual adjustments if needed.
+
+### Frontend ([templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html) & [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js))
+- **[MODIFY]** [templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html)
+  - Change `<input type="number" id="qty-normal" value="0" min="0">` to `value="1" min="0"`.
+  - Add a new Master dashboard tab: `<button id="tab-locations">로케이션 배정</button>`.
+  - Add a file upload button specifically for "고정 로케이션 목록 업로드" in the master controls.
+  - Add `#dashboard-locations` section to view the assigned cells and the top volume products.
+- **[MODIFY]** [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js)
+  - Inside [submitScanData()](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js#227-273), reset `qty-normal` to `1` instead of `0`.
+  - Add logic to handle the new location excel upload.
+  - Add `loadAggregatedPlans()` to show the result of the automatic mapping.

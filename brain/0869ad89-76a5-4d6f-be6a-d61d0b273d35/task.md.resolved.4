@@ -1,0 +1,9 @@
+# Handle Duplicate Barcodes & Master Data Updates
+
+- [/] Modify [models.py](file:///c:/Users/dkstk/.gemini/antigravity/models.py) to remove `unique=True` from `ProductMaster.barcode`.
+- [/] Update `/api/products/{barcode}` in [main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py) to return a list of matched products instead of just the first one.
+- [/] Update `/api/upload/master` in [main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py) to update existing records and append new ones without deleting the entire table (partially already there, but needs to handle multiple identical barcodes correctly if the upload logic currently assumes 1:1).
+- [/] Modify [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js) to handle a list of returned products:
+  - If 1 product, proceed as normal.
+  - If > 1 product, display a modal or a list of radio buttons to let the worker select the correct item before proceeding to the quantity input UI.
+- [/] Update [templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html) to add a product selection modal/UI component for the worker view.

@@ -1,0 +1,39 @@
+# Handle Duplicate Barcodes & Master Data Updates
+
+- [x] Modify `models.py` to remove `unique=True` from `ProductMaster.barcode`.
+- [x] Update `/api/products/{barcode}` in `main.py` to return a list of matched products instead of just the first one.
+- [x] Update `/api/upload/master` in `main.py` to update existing records and append new ones without deleting the entire table (partially already there, but needs to handle multiple identical barcodes correctly if the upload logic currently assumes 1:1).
+- [x] Modify `static/js/app.js` to handle a list of returned products:
+  - If 1 product, proceed as normal.
+  - If > 1 product, display a modal or a list of radio buttons to let the worker select the correct item before proceeding to the quantity input UI.
+- [x] Update `templates/index.html` to add a product selection modal/UI component for the worker view.
+
+# Debug Return Plan & Dynamic Store Select
+- [x] Add `/api/stores` endpoint to `main.py` that queries `ReturnPlan` and returns a list of unique store names.
+- [x] Update frontend `index.html` to populate the `select-store` dropdown dynamically upon page load using the `/api/stores` endpoint (keeping '전체' for Master).
+- [x] Debug the `upload_plan` API in `main.py`. The user reports it is empty despite a successful upload message. It might be due to column header names in their Excel file not matching `'STORE_NAME'`, `'ITEM_CODE'`, or `'ORDER_QUANTITY'`. We need to handle fallback column names like '점포명', '상품코드', '수량' or '예정수량'.
+
+# Location Assignment & Defaults
+# Location Assignment & Defaults
+- [x] Add `fixed_cell` Column to `ProductMaster` in `models.py`.
+- [x] Make `qty-normal` input default to 1, and reset to 1 in `app.js`.
+- [x] Create `POST /api/upload/locations` to read excel and auto-map top volume products to cells.
+- [x] Create `GET /api/aggregate-plans` to list the assignments.
+- [x] Add "로케이션 배정" (Location Assignment) tab and specific file upload in `index.html`.
+- [x] Implement `loadAggregatedPlans()` and the upload logic in `app.js`.
+
+# Master Dashboard vs Store View UI Separation
+- [x] In `app.js` and `index.html`, remove the store selection requirement for Master at login.
+- [x] Add new top-level tabs in `index.html`: `[전체 현황(All)]`, `[점포별 상세]`, `[상품 마스터 관리]`, `[로케이션 배정]`.
+- [x] Migrate the HTML tables into the re-organized tab panels.
+- [x] Update `app.js` tab switching and data fetching logic to support the separation of 'All' and 'Store' views.
+
+# Excel export feature
+- [x] Add `/api/export/scans` in `main.py` using pandas to stream Excel or CSV files.
+- [x] Add download button to `dashboard-all` section in `index.html`.
+- [x] Implement `downloadScansExcel` in `app.js` to trigger the download.
+
+# Login Authentication
+- [x] In `index.html`, add worker name input and password input fields.
+- [x] In `app.js`, add logic to toggle visibility based on role selection.
+- [x] Update `enterSystem` to require worker name, validate worker password ('1111'), and validate master password ('2306').

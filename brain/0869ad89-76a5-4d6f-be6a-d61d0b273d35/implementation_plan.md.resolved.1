@@ -1,0 +1,32 @@
+# Plan: Duplicate Barcode Support & Master Update Rules
+
+## Goal
+1. Allow the product master to store multiple items with the exact same barcode.
+2. During PDA scanning, if a barcode matches multiple products, the worker should be prompted to select the correct product before entering return quantities.
+3. Clarify and enforce that the Master Excel Upload only *adds* or *updates* records, rather than wiping the database (the current code `db.add`s new ones, but we need to ensure the logic works correctly even with duplicate barcodes in the DB).
+
+## Proposed Changes
+
+### Database Layer ([models.py](file:///c:/Users/dkstk/.gemini/antigravity/models.py))
+- **[MODIFY]** [models.py](file:///c:/Users/dkstk/.gemini/antigravity/models.py)
+  - Remove `unique=True` from `ProductMaster.barcode`. This will require dropping the old table and recreating it (since SQLite alter constraints are tricky, and we are still in development, we'll recommend wiping the DB or executing an ALTER query).
+
+### Backend ([main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py))
+- **[MODIFY]** [main.py](file:///c:/Users/dkstk/.gemini/antigravity/main.py)
+  - `GET /api/products/{barcode}`
+    - Change `.first()` to `.all()`.
+    - Loop through all matched products and attach their `expected_qty` and `is_planned` status.
+    - Return a JSON list: `[ { code, name, expected_qty, is_planned }, ... ]`.
+  - `POST /api/upload/master`
+    - The current logic uses `existing_items = {item.barcode: item for item in ...}` which overrides if there are multiple barcodes.
+    - Change this to check by `item.code` (상품코드) since the code should be the true unique identifier, even if the barcode is shared.
+    - If `item.code` exists, update his name/barcode. If not, insert as new.
+
+### Frontend ([templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html) & [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js))
+- **[MODIFY]** [templates/index.html](file:///c:/Users/dkstk/.gemini/antigravity/templates/index.html)
+  - Add a "Duplicate Selection Panel" inside `#view-scan` that appears when multiple products are found.
+- **[MODIFY]** [static/js/app.js](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js)
+  - In [handleScan()](file:///c:/Users/dkstk/.gemini/antigravity/static/js/app.js#95-135):
+    - If the API returns exactly 1 item, proceed straight to `scan-result` (current behavior).
+    - If the API returns > 1 item, render the "Duplicate Selection Panel" with radio buttons for each product.
+    - Add a function `selectDuplicateProduct(index)` that takes the user's choice and moves to `scan-result`.
