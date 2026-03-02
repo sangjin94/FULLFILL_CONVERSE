@@ -69,27 +69,6 @@
                 </div>
             </div>
 
-            <!-- 반품 예정 리스트 표시 영역 추가 -->
-            <div class="glass-panel" style="margin-bottom: 1rem;">
-                <h3>반품 예정 리스트 (<span id="plan-store-name"></span>)</h3>
-                <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>바코드/코드</th>
-                                <th>상품명</th>
-                                <th>예정수량</th>
-                            </tr>
-                        </thead>
-                        <tbody id="plan-tbody">
-                            <tr>
-                                <td colspan="3" class="text-center">불러오는 중...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
             <!-- 중복 상품 선택 영역 -->
             <div id="duplicate-selection" class="glass-panel hidden"
                 style="margin-bottom: 1rem; border: 2px solid var(--accent-blue);">
@@ -104,7 +83,7 @@
             </div>
 
             <!-- 스캔 결과 표시 영역 -->
-            <div id="scan-result" class="glass-panel hidden">
+            <div id="scan-result" class="glass-panel hidden" style="margin-bottom: 1rem;">
                 <h3>상품 확인</h3>
                 <div id="product-info" style="margin-bottom: 1.5rem; color: var(--text-secondary);">
                     <!-- 상품 정보 동적 렌더링 -->
@@ -130,6 +109,27 @@
                 </div>
 
                 <button class="btn btn-success" style="width:100%" onclick="submitScanData()">반품 처리 저장</button>
+            </div>
+
+            <!-- 반품 예정 리스트 표시 영역 추가 -->
+            <div class="glass-panel" style="margin-bottom: 1rem;">
+                <h3>반품 예정 리스트 (<span id="plan-store-name"></span>)</h3>
+                <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>바코드/코드</th>
+                                <th>상품명</th>
+                                <th>예정수량</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plan-tbody">
+                            <tr>
+                                <td colspan="3" class="text-center">불러오는 중...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
 

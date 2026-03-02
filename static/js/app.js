@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 마스터 역할은 추후 인증을 넣거나, 점포 리스트를 동적으로 불러옴
     await loadAvailableStores();
 
+    // 세션 복원 시도
+    restoreSession();
+
     // 역할 선택 시 UI 토글
     document.getElementById('select-role').addEventListener('change', (e) => {
         const workerNameGroup = document.getElementById('worker-name-group');
@@ -138,6 +141,70 @@ function enterSystem() {
 
         switchDashboardTab('all'); // 초기 탭 설정
     }
+
+    // 세션 저장 (30분 만료)
+    const expireTime = new Date().getTime() + 30 * 60 * 1000;
+    localStorage.setItem('pdaSession', JSON.stringify({
+        role: currentState.role,
+        storeName: currentState.storeName,
+        workerName: currentState.workerName,
+        expires: expireTime
+    }));
+}
+
+// 세션 복원
+function restoreSession() {
+    const sessionDataStr = localStorage.getItem('pdaSession');
+    if (sessionDataStr) {
+        try {
+            const sessionData = JSON.parse(sessionDataStr);
+            if (new Date().getTime() < sessionData.expires) {
+                // 세션 유효함, 상태 복원
+                currentState.role = sessionData.role;
+                currentState.storeName = sessionData.storeName;
+                currentState.workerName = sessionData.workerName;
+
+                // 만료 시간 갱신 (다시 30분)
+                sessionData.expires = new Date().getTime() + 30 * 60 * 1000;
+                localStorage.setItem('pdaSession', JSON.stringify(sessionData));
+
+                // UI 적용
+                document.getElementById('user-info').classList.remove('hidden');
+
+                if (currentState.role === 'worker') {
+                    document.getElementById('current-store').innerText = `${currentState.storeName} (${currentState.workerName})`;
+                    switchView('scan');
+                    document.getElementById('plan-store-name').innerText = currentState.storeName;
+                    loadReturnPlan(currentState.storeName);
+                    setTimeout(() => { document.getElementById('barcode-input').focus(); }, 100);
+                } else if (currentState.role === 'master') {
+                    document.getElementById('current-store').innerText = `전체 (마스터 관리자)`;
+                    switchView('dashboard');
+
+                    // 마스터용 점포 필터 복사 (다시 로드)
+                    const storeEl = document.getElementById('select-store');
+                    const filterSelect = document.getElementById('master-store-filter');
+                    filterSelect.innerHTML = '<option value="">점포를 선택하세요</option>';
+                    Array.from(storeEl.options).forEach(opt => {
+                        if (opt.value && opt.value !== '전체' && !opt.value.includes('오류') && !opt.value.includes('없습니다')) {
+                            const newOpt = document.createElement('option');
+                            newOpt.value = opt.value;
+                            newOpt.text = opt.text;
+                            filterSelect.appendChild(newOpt);
+                        }
+                    });
+
+                    switchDashboardTab('all');
+                }
+            } else {
+                // 만료됨
+                localStorage.removeItem('pdaSession');
+            }
+        } catch (e) {
+            console.error("세션 파싱 에러", e);
+            localStorage.removeItem('pdaSession');
+        }
+    }
 }
 
 // 작업자: 반품(입고) 예정 리스트 로드
@@ -188,6 +255,7 @@ async function loadReturnPlan(storeName) {
 function logout() {
     currentState.role = null;
     currentState.storeName = null;
+    localStorage.removeItem('pdaSession');
     document.getElementById('user-info').classList.add('hidden');
     switchView('roleSelect');
 }
