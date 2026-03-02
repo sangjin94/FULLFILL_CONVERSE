@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 마스터 역할은 추후 인증을 넣거나, 점포 리스트를 동적으로 불러옴
     await loadAvailableStores();
 
-    // 세션 복원 시도
+    // 세션 복원 시도 (점포 목록 로드 이후 실행)
     restoreSession();
 
     // 역할 선택 시 UI 토글
@@ -172,12 +172,29 @@ function restoreSession() {
                 document.getElementById('user-info').classList.remove('hidden');
 
                 if (currentState.role === 'worker') {
+                    // 방어 코드: 폼 값 복원
+                    document.getElementById('select-role').value = 'worker';
+                    document.getElementById('input-worker-name').value = currentState.workerName;
+                    const storeSelect = document.getElementById('select-store');
+                    if (storeSelect) {
+                        for (let i = 0; i < storeSelect.options.length; i++) {
+                            if (storeSelect.options[i].value === currentState.storeName) {
+                                storeSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
+
                     document.getElementById('current-store').innerText = `${currentState.storeName} (${currentState.workerName})`;
                     switchView('scan');
                     document.getElementById('plan-store-name').innerText = currentState.storeName;
                     loadReturnPlan(currentState.storeName);
-                    setTimeout(() => { document.getElementById('barcode-input').focus(); }, 100);
+                    setTimeout(() => {
+                        const barcodeInput = document.getElementById('barcode-input');
+                        if (barcodeInput) barcodeInput.focus();
+                    }, 100);
                 } else if (currentState.role === 'master') {
+                    document.getElementById('select-role').value = 'master';
                     document.getElementById('current-store').innerText = `전체 (마스터 관리자)`;
                     switchView('dashboard');
 
@@ -185,14 +202,16 @@ function restoreSession() {
                     const storeEl = document.getElementById('select-store');
                     const filterSelect = document.getElementById('master-store-filter');
                     filterSelect.innerHTML = '<option value="">점포를 선택하세요</option>';
-                    Array.from(storeEl.options).forEach(opt => {
-                        if (opt.value && opt.value !== '전체' && !opt.value.includes('오류') && !opt.value.includes('없습니다')) {
-                            const newOpt = document.createElement('option');
-                            newOpt.value = opt.value;
-                            newOpt.text = opt.text;
-                            filterSelect.appendChild(newOpt);
-                        }
-                    });
+                    if (storeEl) {
+                        Array.from(storeEl.options).forEach(opt => {
+                            if (opt.value && opt.value !== '전체' && !opt.value.includes('오류') && !opt.value.includes('없습니다')) {
+                                const newOpt = document.createElement('option');
+                                newOpt.value = opt.value;
+                                newOpt.text = opt.text;
+                                filterSelect.appendChild(newOpt);
+                            }
+                        });
+                    }
 
                     switchDashboardTab('all');
                 }
@@ -414,19 +433,14 @@ function switchDashboardTab(tabName) {
     // 버튼 스타일 처리
     document.getElementById('tab-all').className = 'btn';
     document.getElementById('tab-store').className = 'btn';
-    document.getElementById('tab-master').className = 'btn';
     document.getElementById('tab-locations').className = 'btn';
     document.getElementById(`tab-${tabName}`).classList.add('btn-primary');
 
     if (tabName === 'all') {
         loadDashboardData(''); // 전체 스캔 로드
-        loadPlanList('');      // 전체 계획 로드
     }
     else if (tabName === 'store') {
         loadStoreDetail();     // 선택된 점포 기준 로드
-    }
-    else if (tabName === 'master') {
-        loadMasterData();
     }
     else if (tabName === 'locations') {
         loadLocationsData();
@@ -542,62 +556,8 @@ async function loadStoreDetail() {
     }
 }
 
-// 대시보드 - 상품 마스터 로드
-async function loadMasterData() {
-    const tbody = document.getElementById('master-tbody');
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center">데이터를 불러오는 중...</td></tr>';
-
-    try {
-        const res = await fetch('/api/masters');
-        if (res.ok) {
-            const data = await res.json();
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">등록된 상품 마스터가 없습니다.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.map(item => `
-                <tr>
-                    <td>${item.id}</td>
-                    <td>${item.barcode}</td>
-                    <td>${item.code}</td>
-                    <td>${item.name}</td>
-                </tr>
-            `).join('');
-        }
-    } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center">서버 연결 오류</td></tr>';
-    }
-}
-
-// 전체 반품 예정 리스트 로드
-async function loadPlanList() {
-    const tbody = document.getElementById('all-plan-tbody');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center">데이터를 불러오는 중...</td></tr>';
-
-    try {
-        const res = await fetch(`/api/plans`);
-        if (res.ok) {
-            const data = await res.json();
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">등록된 반품 예정 리스트가 없습니다.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.map(item => `
-                <tr>
-                    <td>${item.id}</td>
-                    <td>${item.store_name}</td>
-                    <td>${item.product_code}</td>
-                    <td>${item.product_name}</td>
-                    <td>${item.expected_qty}</td>
-                </tr>
-            `).join('');
-        }
-    } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">서버 연결 오류</td></tr>';
-    }
-}
-
-// 인라인 편집 활성화
+// 대시보드 - 데이터 과부하 제거 (Master/Plan 테이블 제거)
+// loadMasterData, loadPlanList 데이터베이스 호출 부분 삭제 (엑셀로만 확인)
 function enableEdit(id) {
     document.getElementById(`edit-n-${id}`).disabled = false;
     document.getElementById(`edit-d-${id}`).disabled = false;

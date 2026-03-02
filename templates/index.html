@@ -154,20 +154,19 @@
             <!-- 탭 메뉴 -->
             <div class="tabs"
                 style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-                <button class="btn btn-primary" id="tab-all" onclick="switchDashboardTab('all')">전체 현황(All)</button>
-                <button class="btn" id="tab-store" onclick="switchDashboardTab('store')">점포별 상세</button>
-                <button class="btn" id="tab-master" onclick="switchDashboardTab('master')">상품 마스터 관리</button>
+                <button class="btn btn-primary" id="tab-all" onclick="switchDashboardTab('all')">스캔 내역 전체</button>
+                <button class="btn" id="tab-store" onclick="switchDashboardTab('store')">점포별 상세 (스캔/예정)</button>
                 <button class="btn" id="tab-locations" onclick="switchDashboardTab('locations')">로케이션 배정</button>
             </div>
 
             <!-- 전체 현황 영역 (All) -->
             <div id="dashboard-all" class="glass-panel dashboard-section" style="overflow-x: auto;">
                 <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                    <h3>전체 통합 현황 (스캔 내역 & 반품 예정)</h3>
+                    <h3>전체 스캔 내역</h3>
                 </div>
 
                 <div class="flex justify-between items-center" style="margin-bottom:0.5rem;">
-                    <h4 style="margin:0; color:var(--text-secondary);">전체 스캔 내역</h4>
+                    <h4 style="margin:0; color:var(--text-secondary);">현장 스캔된 전체 누적 데이터</h4>
                     <button class="btn btn-success" style="padding: 0.3rem 0.8rem; font-size: 0.9rem;"
                         onclick="downloadScansExcel()">엑셀 다운로드</button>
                 </div>
@@ -187,24 +186,6 @@
                     <tbody id="all-scan-tbody">
                         <tr>
                             <td colspan="8" class="text-center">데이터가 없습니다.</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h4 style="margin-bottom:0.5rem; color:var(--text-secondary);">전체 반품 예정 리스트</h4>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>점포명</th>
-                            <th>상품코드</th>
-                            <th>상품명</th>
-                            <th>예정수량</th>
-                        </tr>
-                    </thead>
-                    <tbody id="all-plan-tbody">
-                        <tr>
-                            <td colspan="5" class="text-center">데이터가 없습니다.</td>
                         </tr>
                     </tbody>
                 </table>
