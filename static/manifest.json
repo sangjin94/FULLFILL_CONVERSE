@@ -2,7 +2,7 @@
   "name": "PDA 반품 관리",
   "short_name": "반품관리",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#0f172a",
   "theme_color": "#3b82f6",
   "orientation": "portrait",
