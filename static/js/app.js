@@ -12,9 +12,17 @@ const views = {
     dashboard: document.getElementById('view-dashboard')
 };
 
+// 모바일 브라우저 주소창 숨기기 헬퍼
+function hideAddressBar() {
+    setTimeout(function () {
+        window.scrollTo(0, 1);
+    }, 0);
+}
+
 function switchView(viewName) {
     Object.values(views).forEach(v => v.classList.add('hidden'));
     views[viewName].classList.remove('hidden');
+    hideAddressBar(); // 화면 전환 시 주소창을 숨기기 위해 스크롤 이동
 }
 
 // 1. 초기 렌더링 및 점포목록 가져오기
