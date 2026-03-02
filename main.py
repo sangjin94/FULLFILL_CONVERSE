@@ -40,7 +40,8 @@ def get_product(barcode: str, store: str = None, db: Session = Depends(get_db)):
             "name": f"미등록상품({barcode})",
             "code": barcode,
             "expected_qty": 0,
-            "is_planned": False
+            "is_planned": False,
+            "fixed_cell": None
         }]
 
     results = []
@@ -61,7 +62,8 @@ def get_product(barcode: str, store: str = None, db: Session = Depends(get_db)):
             "name": product.name,
             "code": product.code,
             "expected_qty": expected_qty,
-            "is_planned": is_planned
+            "is_planned": is_planned,
+            "fixed_cell": product.fixed_cell
         })
 
     return results

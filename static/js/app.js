@@ -262,9 +262,16 @@ function renderProductResult(product) {
     // 전송 시 바코드가 아닌 '선택된 상품코드'를 보내기 위해 저장 (중요)
     document.getElementById('barcode-input').dataset.selectedCode = product.code;
 
+    const size = product.code && product.code.length >= 3 ? product.code.slice(-3) : '';
+    const sizeHtml = size ? `<p><strong>사이즈 (코드 끝 3자리):</strong> <span style="font-size: 1.2rem; color: var(--accent-blue); font-weight: bold;">${size}</span></p>` : '';
+    const fixedCellStr = product.fixed_cell ? product.fixed_cell : '미배정';
+    const fixedCellHtml = `<p><strong>이동 로케이션(고정셀):</strong> <span style="font-size: 1.2rem; color: var(--accent-red); font-weight: bold;">${fixedCellStr}</span></p>`;
+
     document.getElementById('product-info').innerHTML = `
         <p><strong>상품명:</strong> ${product.name}</p>
         <p><strong>상품코드:</strong> ${product.code}</p>
+        ${sizeHtml}
+        ${fixedCellHtml}
         ${planInfoHtml}
     `;
     document.getElementById('scan-result').classList.remove('hidden');
