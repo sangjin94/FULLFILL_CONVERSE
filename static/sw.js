@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pda-return-v1';
+const CACHE_NAME = 'pda-return-v2';
 
 self.addEventListener('install', (e) => {
     e.waitUntil(

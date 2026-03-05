@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#3b82f6">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
 </head>
 
 <body>
@@ -22,12 +22,15 @@
             <div id="user-info" class="hidden flex items-center" style="gap: 1rem;">
                 <div id="worker-header-info" class="flex items-center hidden" style="gap: 0.5rem;">
                     <span id="current-worker-name" style="color:var(--text-secondary); font-size: 0.9rem;"></span>
-                    <select id="header-store-select" class="input-control" style="margin: 0; padding: 0.3rem 0.5rem; font-size: 0.9rem; width: auto; max-width: 150px;" onchange="changeStoreFromHeader()">
+                    <select id="header-store-select" class="input-control"
+                        style="margin: 0; padding: 0.3rem 0.5rem; font-size: 0.9rem; width: auto; max-width: 150px;"
+                        onchange="changeStoreFromHeader()">
                         <!-- 동적 생성 -->
                     </select>
                 </div>
                 <span id="current-store-master" class="hidden" style="color:var(--accent-blue)"></span>
-                <button class="btn btn-danger" onclick="logout()" style="padding: 0.3rem 0.6rem; font-size:0.9rem;">로그아웃</button>
+                <button class="btn btn-danger" onclick="logout()"
+                    style="padding: 0.3rem 0.6rem; font-size:0.9rem;">로그아웃</button>
             </div>
         </header>
 
@@ -281,7 +284,7 @@
     </div>
 
     <!-- 로직 스크립트 연결 추후 진행 -->
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=2"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
