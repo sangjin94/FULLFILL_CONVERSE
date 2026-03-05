@@ -19,9 +19,15 @@
     <div class="container">
         <header>
             <div class="brand">ReturnManager +</div>
-            <div id="user-info" class="hidden">
-                <span id="current-store" style="margin-right:1rem;color:var(--accent-blue)"></span>
-                <button class="btn btn-danger" onclick="logout()">로그아웃</button>
+            <div id="user-info" class="hidden flex items-center" style="gap: 1rem;">
+                <div id="worker-header-info" class="flex items-center hidden" style="gap: 0.5rem;">
+                    <span id="current-worker-name" style="color:var(--text-secondary); font-size: 0.9rem;"></span>
+                    <select id="header-store-select" class="input-control" style="margin: 0; padding: 0.3rem 0.5rem; font-size: 0.9rem; width: auto; max-width: 150px;" onchange="changeStoreFromHeader()">
+                        <!-- 동적 생성 -->
+                    </select>
+                </div>
+                <span id="current-store-master" class="hidden" style="color:var(--accent-blue)"></span>
+                <button class="btn btn-danger" onclick="logout()" style="padding: 0.3rem 0.6rem; font-size:0.9rem;">로그아웃</button>
             </div>
         </header>
 

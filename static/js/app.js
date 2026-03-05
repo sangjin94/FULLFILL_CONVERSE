@@ -106,7 +106,23 @@ function enterSystem() {
 
         currentState.workerName = workerNameEl.value.trim();
         document.getElementById('user-info').classList.remove('hidden');
-        document.getElementById('current-store').innerText = `${currentState.storeName} (${currentState.workerName})`;
+        
+        // 워커 헤더 뷰 On
+        document.getElementById('worker-header-info').classList.remove('hidden');
+        document.getElementById('current-store-master').classList.add('hidden');
+        document.getElementById('current-worker-name').innerText = currentState.workerName;
+        
+        const headerStoreSelect = document.getElementById('header-store-select');
+        headerStoreSelect.innerHTML = '';
+        Array.from(storeEl.options).forEach(opt => {
+            if (opt.value && opt.value !== '전체' && !opt.value.includes('오류') && !opt.value.includes('없습니다')) {
+                const newOpt = document.createElement('option');
+                newOpt.value = opt.value;
+                newOpt.text = opt.text;
+                headerStoreSelect.appendChild(newOpt);
+            }
+        });
+        headerStoreSelect.value = currentState.storeName;
 
         if (!currentState.storeName || currentState.storeName === '전체' || currentState.storeName.includes('없습니다')) {
             alert("작업 가능한 특정 점포를 선택해주세요.");
@@ -124,7 +140,12 @@ function enterSystem() {
         }
 
         document.getElementById('user-info').classList.remove('hidden');
-        document.getElementById('current-store').innerText = `전체 (마스터 관리자)`;
+        
+        // 마스터 헤더 뷰 On
+        document.getElementById('worker-header-info').classList.add('hidden');
+        document.getElementById('current-store-master').classList.remove('hidden');
+        document.getElementById('current-store-master').innerText = `전체 (마스터 관리자)`;
+        
         switchView('dashboard');
 
         // 마스터용 점포 필터 드롭다운 옵션 복사 (전체 제외)
@@ -185,7 +206,22 @@ function restoreSession() {
                         }
                     }
 
-                    document.getElementById('current-store').innerText = `${currentState.storeName} (${currentState.workerName})`;
+                    document.getElementById('worker-header-info').classList.remove('hidden');
+                    document.getElementById('current-store-master').classList.add('hidden');
+                    document.getElementById('current-worker-name').innerText = currentState.workerName;
+                    
+                    const headerStoreSelect = document.getElementById('header-store-select');
+                    headerStoreSelect.innerHTML = '';
+                    Array.from(storeSelect.options).forEach(opt => {
+                        if (opt.value && opt.value !== '전체' && !opt.value.includes('오류') && !opt.value.includes('없습니다')) {
+                            const newOpt = document.createElement('option');
+                            newOpt.value = opt.value;
+                            newOpt.text = opt.text;
+                            headerStoreSelect.appendChild(newOpt);
+                        }
+                    });
+                    headerStoreSelect.value = currentState.storeName;
+
                     switchView('scan');
                     document.getElementById('plan-store-name').innerText = currentState.storeName;
                     loadReturnPlan(currentState.storeName);
@@ -195,7 +231,9 @@ function restoreSession() {
                     }, 100);
                 } else if (currentState.role === 'master') {
                     document.getElementById('select-role').value = 'master';
-                    document.getElementById('current-store').innerText = `전체 (마스터 관리자)`;
+                    document.getElementById('worker-header-info').classList.add('hidden');
+                    document.getElementById('current-store-master').classList.remove('hidden');
+                    document.getElementById('current-store-master').innerText = `전체 (마스터 관리자)`;
                     switchView('dashboard');
 
                     // 마스터용 점포 필터 복사 (다시 로드)
@@ -277,6 +315,46 @@ function logout() {
     localStorage.removeItem('pdaSession');
     document.getElementById('user-info').classList.add('hidden');
     switchView('roleSelect');
+}
+
+// 점포 변경 (헤더 드롭다운)
+function changeStoreFromHeader() {
+    const newStore = document.getElementById('header-store-select').value;
+    if (newStore === currentState.storeName) return;
+
+    if (!confirm(`작업 점포를 [${newStore}]로 변경하시겠습니까?`)) {
+        document.getElementById('header-store-select').value = currentState.storeName;
+        return;
+    }
+
+    currentState.storeName = newStore;
+    
+    // Select-store (로그인 화면 드롭다운) 동기화
+    const storeSelect = document.getElementById('select-store');
+    if (storeSelect) storeSelect.value = newStore;
+
+    // 세션 갱신
+    const sessionDataStr = localStorage.getItem('pdaSession');
+    if (sessionDataStr) {
+        try {
+            const sessionData = JSON.parse(sessionDataStr);
+            sessionData.storeName = newStore;
+            sessionData.expires = new Date().getTime() + 30 * 60 * 1000;
+            localStorage.setItem('pdaSession', JSON.stringify(sessionData));
+        } catch(e) {}
+    }
+
+    document.getElementById('plan-store-name').innerText = currentState.storeName;
+    loadReturnPlan(currentState.storeName);
+    
+    // 진행중인 스캔 폼 초기화
+    document.getElementById('barcode-input').value = '';
+    document.getElementById('duplicate-selection').classList.add('hidden');
+    document.getElementById('scan-result').classList.add('hidden');
+    document.getElementById('barcode-input').focus();
+    
+    // 알림용 Toast 혹은 간략 Alert (선택사항)
+    // alert(`점포가 ${newStore}로 변경되었습니다.`);
 }
 
 // 현재 조회된 중복 상품 임시 저장소
