@@ -22,6 +22,8 @@
             <div id="user-info" class="hidden flex items-center" style="gap: 1rem;">
                 <div id="worker-header-info" class="flex items-center hidden" style="gap: 0.5rem;">
                     <span id="current-worker-name" style="color:var(--text-secondary); font-size: 0.9rem;"></span>
+                    <span id="header-batch-name"
+                        style="color:var(--accent-blue); font-size: 0.9rem; font-weight: bold; padding-left: 0.5rem; border-left: 1px solid var(--border-color);"></span>
                     <select id="header-store-select" class="input-control"
                         style="margin: 0; padding: 0.3rem 0.5rem; font-size: 0.9rem; width: auto; max-width: 150px;"
                         onchange="changeStoreFromHeader()">
@@ -57,10 +59,21 @@
                 <input type="password" id="input-password" class="input-control" placeholder="비밀번호 입력">
             </div>
 
+            <div class="input-group" id="batch-group">
+                <label>작업 차수</label>
+                <div class="flex gap-2">
+                    <select id="select-batch" class="input-control" onchange="onBatchSelectChange()" style="flex:1">
+                        <option value="">차수를 선택하세요...</option>
+                    </select>
+                    <input type="text" id="input-custom-batch" class="input-control hidden" placeholder="새 차수명 입력"
+                        style="flex:1">
+                </div>
+            </div>
+
             <div class="input-group" id="store-group">
                 <label>작업 점포</label>
                 <select id="select-store" class="input-control">
-                    <option value="">데이터를 불러오는 중입니다...</option>
+                    <option value="">차수를 먼저 선택해주세요...</option>
                 </select>
             </div>
 
@@ -150,13 +163,15 @@
                     <button class="btn" onclick="loadDashboardData()">새로고침</button>
                     <!-- 엑셀 데이터 업로드를 위한 버튼 -->
                     <label class="btn btn-primary" style="margin:0; cursor:pointer;">
-                        상품마스터 업로드 (XLSX)
+                        상품마스터 업로드
                         <input type="file" class="hidden" id="upload-master" accept=".csv, .xlsx, .xls">
                     </label>
-                    <label class="btn btn-primary" style="margin:0; cursor:pointer;">
-                        반품예정 업로드 (XLSX)
-                        <input type="file" class="hidden" id="upload-plan" accept=".csv, .xlsx, .xls">
-                    </label>
+                    <button class="btn btn-primary" style="margin:0;" onclick="openPlanUploadModal()">
+                        반품예정(차수) 업로드
+                    </button>
+                    <button class="btn btn-danger" style="margin:0;" onclick="openBatchManageModal()">
+                        차수 관리
+                    </button>
                 </div>
             </div>
 
@@ -172,17 +187,25 @@
             <div id="dashboard-all" class="glass-panel dashboard-section" style="overflow-x: auto;">
                 <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
                     <h3>전체 스캔 내역</h3>
+                    <div class="flex items-center gap-2">
+                        <span style="font-weight: 600;">차수 필터:</span>
+                        <select id="master-batch-filter-all" class="input-control" style="width: 200px; margin:0;"
+                            onchange="loadDashboardData()">
+                            <option value="전체">전체 차수</option>
+                        </select>
+                        <button class="btn btn-success" style="padding: 0.3rem 0.8rem; font-size: 0.9rem;"
+                            onclick="downloadScansExcel()">엑셀 다운로드</button>
+                    </div>
                 </div>
 
                 <div class="flex justify-between items-center" style="margin-bottom:0.5rem;">
-                    <h4 style="margin:0; color:var(--text-secondary);">현장 스캔된 전체 누적 데이터</h4>
-                    <button class="btn btn-success" style="padding: 0.3rem 0.8rem; font-size: 0.9rem;"
-                        onclick="downloadScansExcel()">엑셀 다운로드</button>
+                    <h4 style="margin:0; color:var(--text-secondary);">해당 차수의 스캔 데이터 목록</h4>
                 </div>
                 <table class="data-table" style="margin-bottom: 2rem;">
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>차수</th>
                             <th>점포명</th>
                             <th>상품 정보</th>
                             <th>정상</th>
@@ -203,12 +226,21 @@
             <!-- 점포별 상세 영역 -->
             <div id="dashboard-store" class="glass-panel dashboard-section hidden" style="overflow-x: auto;">
                 <div class="flex gap-4 items-center"
-                    style="margin-bottom: 1rem; background: var(--bg-color); padding: 1rem; border-radius: 8px;">
-                    <h3 style="margin:0;">조회할 점포 선택: </h3>
-                    <select id="master-store-filter" class="input-control" style="width: 250px; margin:0;"
-                        onchange="loadStoreDetail()">
-                        <option value="">데이터를 불러오는 중입니다...</option>
-                    </select>
+                    style="margin-bottom: 1rem; background: var(--bg-color); padding: 1rem; border-radius: 8px; flex-wrap: wrap;">
+                    <div class="flex items-center gap-2">
+                        <h3 style="margin:0;">조회 차수: </h3>
+                        <select id="master-batch-filter-store" class="input-control" style="width: 200px; margin:0;"
+                            onchange="loadStoreListForMasterStoreView()">
+                            <option value="전체">전체 차수</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h3 style="margin:0;">조회 점포: </h3>
+                        <select id="master-store-filter" class="input-control" style="width: 250px; margin:0;"
+                            onchange="loadStoreDetail()">
+                            <option value="">차수를 먼저 선택/불러오는 중...</option>
+                        </select>
+                    </div>
                 </div>
 
                 <h4 style="margin-bottom:0.5rem; color:var(--text-secondary);">해당 점포 스캔 내역</h4>
@@ -282,6 +314,70 @@
             </div>
         </main>
     </div>
+
+    <!-- 반품 예정 파일 업로드 모달 -->
+    <div id="modal-upload-plan" class="modal hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div class="glass-panel" style="width: 400px; padding: 2rem; position: relative;">
+            <h3 style="margin-bottom: 1rem;">반품 예정 리스트 업로드</h3>
+            <div class="input-group">
+                <label>차수 입력 (예: 1차, 2차, 예외반품 등)</label>
+                <input type="text" id="input-upload-batch-name" class="input-control" placeholder="차수명을 입력하세요">
+            </div>
+            <div class="input-group">
+                <label>엑셀 파일 선택</label>
+                <input type="file" id="input-upload-plan-file" class="input-control" accept=".csv, .xlsx, .xls">
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                * 주의: 이미 존재하는 차수명을 입력할 경우, <strong>기존의 예정 리스트 데이터는 삭제되고 덮어씌워집니다.</strong> (스캔된 휴먼 데이터는 유지됩니다.)
+            </p>
+            <div class="flex gap-2">
+                <button class="btn btn-primary" style="flex:1;" onclick="submitPlanUpload()">업로드</button>
+                <button class="btn" style="flex:1;" onclick="closePlanUploadModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 차수 관리 모달 -->
+    <div id="modal-manage-batch" class="modal hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div class="glass-panel"
+            style="width: 500px; padding: 2rem; position: relative; max-height: 80vh; display: flex; flex-direction: column;">
+            <h3 style="margin-bottom: 1rem;">등록된 차수 관리</h3>
+            <p style="font-size: 0.85rem; color: var(--accent-red); margin-bottom: 1rem; font-weight: bold;">
+                경고: 차수를 삭제하면 해당 차수의 [반품 예정 데이터]와 작업자가 스캔한 [스캔 내역 데이터]가 영구적으로 모두 삭제됩니다.
+            </p>
+            <div
+                style="overflow-y: auto; max-height: 300px; margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                <table class="data-table" style="margin-bottom: 0;">
+                    <thead>
+                        <tr>
+                            <th>차수명</th>
+                            <th style="width: 100px;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batch-manage-tbody">
+                        <tr>
+                            <td colspan="2" class="text-center">불러오는 중...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end">
+                <button class="btn" style="width: 100px;" onclick="closeBatchManageModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .modal {
+            display: flex;
+        }
+
+        .modal.hidden {
+            display: none !important;
+        }
+    </style>
 
     <!-- 로직 스크립트 연결 추후 진행 -->
     <script src="/static/js/app.js?v=2"></script>

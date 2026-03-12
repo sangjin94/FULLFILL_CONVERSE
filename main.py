@@ -23,11 +23,11 @@ def read_root(request: Request):
 # === API 엔드포인트 ===
 
 @app.get("/api/products/{barcode}")
-def get_product(barcode: str, store: str = None, db: Session = Depends(get_db)):
+def get_product(barcode: str, store: str = None, batch: str = None, db: Session = Depends(get_db)):
     """
     특정 바코드/상품코드 상품 조회.
     1차: 상품 마스터에서 상품 정보 획득 (여러 개일 수 있음)
-    2차: 해당 점포의 반품 예정 리스트에 있는지 확인하여 예정 수량 반환
+    2차: 해당 점포/차수의 반품 예정 리스트에 있는지 확인하여 예정 수량 반환
     """
     # 1. 마스터 조회 (바코드 또는 코드로)
     products = db.query(models.ProductMaster).filter(
@@ -41,29 +41,51 @@ def get_product(barcode: str, store: str = None, db: Session = Depends(get_db)):
             "code": barcode,
             "expected_qty": 0,
             "is_planned": False,
-            "fixed_cell": None
+            "fixed_cell": None,
+            "scanned_normal_now": 0,
+            "scanned_defective_now": 0
         }]
 
     results = []
     for product in products:
         expected_qty = 0
         is_planned = False
+        scanned_normal = 0
+        scanned_defective = 0
 
-        if store:
+        # 반품 예정 수량 확인
+        if store and batch:
             plan = db.query(models.ReturnPlan).filter(
                 models.ReturnPlan.store_name == store,
-                models.ReturnPlan.product_code == product.code
+                models.ReturnPlan.product_code == product.code,
+                models.ReturnPlan.batch_name == batch
             ).first()
             if plan:
                 expected_qty = plan.expected_qty
                 is_planned = True
+                
+            # 현재까지 해당 차수에 스캔된 누적 수량 가져오기
+            from sqlalchemy.sql import func
+            scan_sum = db.query(
+                func.sum(models.ScanRecord.normal_qty).label("n"),
+                func.sum(models.ScanRecord.defective_qty).label("d")
+            ).filter(
+                models.ScanRecord.store_name == store,
+                models.ScanRecord.product_code == product.code,
+                models.ScanRecord.batch_name == batch
+            ).first()
+            
+            scanned_normal = scan_sum.n or 0
+            scanned_defective = scan_sum.d or 0
 
         results.append({
             "name": product.name,
             "code": product.code,
             "expected_qty": expected_qty,
             "is_planned": is_planned,
-            "fixed_cell": product.fixed_cell
+            "fixed_cell": product.fixed_cell,
+            "scanned_normal_now": scanned_normal,
+            "scanned_defective_now": scanned_defective
         })
 
     return results
@@ -74,6 +96,7 @@ from sqlalchemy.sql import func
 def register_scan(data: dict, db: Session = Depends(get_db)):
     """작업자의 정상/불량 스캔 내역 저장"""
     new_scan = models.ScanRecord(
+        batch_name=data.get('batch_name', '기본차수'),
         store_name=data.get('store_name'),
         product_code=data.get('barcode'),
         normal_qty=int(data.get('normal_qty', 0)),
@@ -93,11 +116,14 @@ class ScanUpdate(BaseModel):
     notes: str = None
 
 @app.get("/api/scans")
-def list_scans(store: str = None, db: Session = Depends(get_db)):
+def list_scans(store: str = None, batch: str = None, db: Session = Depends(get_db)):
     """마스터 대시보드용 스캔 내역 반환"""
     query = db.query(models.ScanRecord)
     if store and store != "전체":
         query = query.filter(models.ScanRecord.store_name == store)
+    if batch and batch != "전체":
+        query = query.filter(models.ScanRecord.batch_name == batch)
+        
     scans = query.order_by(models.ScanRecord.scanned_at.desc()).all()
     
     results = []
@@ -106,6 +132,7 @@ def list_scans(store: str = None, db: Session = Depends(get_db)):
         prod_name = product.name if product else f"미등록상품({s.product_code})"
         results.append({
             "id": s.id,
+            "batch_name": s.batch_name,
             "store_name": s.store_name,
             "product_code": s.product_code,
             "product_name": prod_name,
@@ -120,7 +147,7 @@ def list_scans(store: str = None, db: Session = Depends(get_db)):
 from fastapi.responses import StreamingResponse
 
 @app.get("/api/export/scans")
-def export_scans_excel(store: str = None, db: Session = Depends(get_db)):
+def export_scans_excel(store: str = None, batch: str = None, db: Session = Depends(get_db)):
     """전체 스캔 내역 엑셀 다운로드"""
     import pandas as pd
     from io import BytesIO
@@ -128,6 +155,9 @@ def export_scans_excel(store: str = None, db: Session = Depends(get_db)):
     query = db.query(models.ScanRecord)
     if store and store != "전체":
         query = query.filter(models.ScanRecord.store_name == store)
+    if batch and batch != "전체":
+        query = query.filter(models.ScanRecord.batch_name == batch)
+        
     scans = query.order_by(models.ScanRecord.scanned_at.desc()).all()
     
     data = []
@@ -136,6 +166,7 @@ def export_scans_excel(store: str = None, db: Session = Depends(get_db)):
         prod_name = product.name if product else f"미등록상품({s.product_code})"
         data.append({
             "ID": s.id,
+            "차수": s.batch_name,
             "점포명": s.store_name,
             "상품코드": s.product_code,
             "상품명": prod_name,
@@ -188,10 +219,13 @@ def delete_scan(scan_id: int, db: Session = Depends(get_db)):
     return {"status": "success", "deleted": deleted_count}
 
 @app.get("/api/plan/{store}")
-def get_return_plan(store: str, db: Session = Depends(get_db)):
-    """점포별 반품(입고) 예정 정보 및 현재 스캔 누적 수량 반환"""
+def get_return_plan(store: str, batch: str = "기본차수", db: Session = Depends(get_db)):
+    """점포/차수별 반품(입고) 예정 정보 및 현재 스캔 누적 수량 반환"""
     # 1. DB에서 예정 리스트 가져오기
-    plans = db.query(models.ReturnPlan).filter(models.ReturnPlan.store_name == store).all()
+    plans = db.query(models.ReturnPlan).filter(
+        models.ReturnPlan.store_name == store,
+        models.ReturnPlan.batch_name == batch
+    ).all()
     mock_plans = []
     for plan in plans:
         product = db.query(models.ProductMaster).filter(models.ProductMaster.code == plan.product_code).first()
@@ -202,12 +236,15 @@ def get_return_plan(store: str, db: Session = Depends(get_db)):
             "expected_qty": plan.expected_qty
         })
 
-    # DB에서 해당 점포의 스캔 내역 합산
+    # DB에서 해당 점포, 차수의 스캔 내역 합산
     scans = db.query(
         models.ScanRecord.product_code,
         func.sum(models.ScanRecord.normal_qty).label("total_normal"),
         func.sum(models.ScanRecord.defective_qty).label("total_defective")
-    ).filter(models.ScanRecord.store_name == store).group_by(models.ScanRecord.product_code).all()
+    ).filter(
+        models.ScanRecord.store_name == store,
+        models.ScanRecord.batch_name == batch
+    ).group_by(models.ScanRecord.product_code).all()
 
     scan_dict = {s.product_code: (s.total_normal or 0, s.total_defective or 0) for s in scans}
     
@@ -238,12 +275,41 @@ def get_return_plan(store: str, db: Session = Depends(get_db)):
     return results
 
 @app.get("/api/stores")
-def list_stores(db: Session = Depends(get_db)):
-    """반품 예정 리스트에 등록된 고유 점포명 목록 반환"""
-    stores = db.query(models.ReturnPlan.store_name).distinct().all()
+def list_stores(batch: str = None, db: Session = Depends(get_db)):
+    """반품 예정 리스트에 등록된 차수별 고유 점포명 목록 반환"""
+    query = db.query(models.ReturnPlan.store_name).distinct()
+    if batch and batch != "전체":
+        query = query.filter(models.ReturnPlan.batch_name == batch)
+        
+    stores = query.all()
     # 튜플 리스트에서 문자열 리스트로 변환
     store_list = [s[0] for s in stores if s[0]]
     return {"stores": store_list}
+
+@app.get("/api/batches")
+def list_batches(db: Session = Depends(get_db)):
+    """등록된 모든 차수명(batch_name) 목록 반환. 스캔만 된 이력도 가져올 수 있게 통합조회 필요 시 UNION 활용가능, 여기선 ReturnPlan 우선"""
+    batches = db.query(models.ReturnPlan.batch_name).distinct().all()
+    # ReturnPlan에 없는 예외 스캔 차수도 찾기
+    scan_batches = db.query(models.ScanRecord.batch_name).distinct().all()
+    
+    batch_set = set([b[0] for b in batches if b[0]]) | set([b[0] for b in scan_batches if b[0]])
+    return {"batches": sorted(list(batch_set))}
+
+@app.delete("/api/batches/{batch_name}")
+def delete_batch(batch_name: str, db: Session = Depends(get_db)):
+    """특정 차수 전체 삭제 (예정 리스트 및 스캔 내역 모두 삭제)"""
+    if not batch_name or batch_name == '전체':
+        return {"status": "error", "message": "'전체' 또는 빈 차수는 일괄 삭제할 수 없습니다."}
+        
+    plan_deleted = db.query(models.ReturnPlan).filter(models.ReturnPlan.batch_name == batch_name).delete()
+    scan_deleted = db.query(models.ScanRecord).filter(models.ScanRecord.batch_name == batch_name).delete()
+    db.commit()
+    
+    return {
+        "status": "success", 
+        "message": f"[{batch_name}] 삭제 완료! (예정리스트 {plan_deleted}건, 스캔기록 {scan_deleted}건 삭제)"
+    }
 
 @app.get("/api/masters")
 def list_masters(db: Session = Depends(get_db)):
@@ -272,11 +338,12 @@ def list_plans(store: str = None, db: Session = Depends(get_db)):
         })
     return results
 
-from fastapi import File, UploadFile
+from fastapi import File, UploadFile, Form
 import pandas as pd
 import io
 import math
 
+# [이하 기존 upload_master 함수 유지...]
 @app.post("/api/upload/master")
 async def upload_master(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """상품 마스터 엑셀 업로드 및 처리"""
@@ -331,12 +398,15 @@ async def upload_master(file: UploadFile = File(...), db: Session = Depends(get_
         return {"status": "error", "message": str(e)}
 
 @app.post("/api/upload/plan")
-async def upload_plan(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    """반품 예정 리스트 엑셀 업로드 및 처리"""
+async def upload_plan(batch_name: str = Form("기본차수"), file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """반품 예정 리스트 엑셀 업로드 및 처리 (차수별 적용)"""
     contents = await file.read()
     try:
         df = pd.read_excel(io.BytesIO(contents))
-        db.query(models.ReturnPlan).delete()
+        
+        # 해당 차수(batch_name)의 기존 예정 데이터만 삭제 후 덮어쓰기
+        deleted = db.query(models.ReturnPlan).filter(models.ReturnPlan.batch_name == batch_name).delete()
+        print(f"Deleted {deleted} existing plans for batch {batch_name}")
         
         # 컬럼 공백 제거 및 대문자화
         df.columns = [str(c).strip().upper() for c in df.columns]
@@ -381,12 +451,12 @@ async def upload_plan(file: UploadFile = File(...), db: Session = Depends(get_db
                     qty = 0
 
             if store_name and store_name != 'nan' and product_code and product_code != 'nan':
-                rp = models.ReturnPlan(store_name=store_name, product_code=product_code, expected_qty=qty)
+                rp = models.ReturnPlan(batch_name=batch_name, store_name=store_name, product_code=product_code, expected_qty=qty)
                 db.add(rp)
                 count += 1
                 
         db.commit()
-        return {"status": "success", "message": f"총 {count}건의 반품 예정 정보가 업로드되었습니다."}
+        return {"status": "success", "message": f"[{batch_name}] 차수에 총 {count}건의 반품 예정 정보가 업로드되었습니다."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

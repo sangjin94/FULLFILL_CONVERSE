@@ -15,6 +15,7 @@ class ReturnPlan(Base):
     __tablename__ = "return_plan"
 
     id = Column(Integer, primary_key=True, index=True)
+    batch_name = Column(String, index=True, default="기본차수") # 차수명
     store_name = Column(String, index=True)           # 점포명
     product_code = Column(String, index=True)         # 상품코드
     expected_qty = Column(Integer, default=0)         # 예상수량 (정상/불량 합산 예정)
@@ -23,6 +24,7 @@ class ScanRecord(Base):
     __tablename__ = "scan_record"
 
     id = Column(Integer, primary_key=True, index=True)
+    batch_name = Column(String, index=True, default="기본차수") # 차수명
     store_name = Column(String, index=True)           # 점포명
     product_code = Column(String, index=True)         # 스캔된 상품코드
     normal_qty = Column(Integer, default=0)           # 정상 검수 수량
