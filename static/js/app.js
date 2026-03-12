@@ -347,21 +347,33 @@ async function loadReturnPlan(storeName, batchName) {
                 let statusHtml = '';
                 const totalScanned = item.scanned_normal + item.scanned_defective;
                 if (item.expected_qty === 0) {
-                    statusHtml = `<span style="color:var(--accent-red); font-weight:bold;">${item.scanned_normal} / ${item.scanned_defective} (예외)</span>`;
+                    statusHtml = `<span style="background: rgba(239,68,68,0.1); padding: 2px 4px; border-radius: 4px; color:var(--accent-red); font-weight:bold;">예외</span>`;
                 } else if (totalScanned > item.expected_qty) {
-                    statusHtml = `<span style="color:var(--accent-red); font-weight:bold;">${item.scanned_normal} / ${item.scanned_defective} (초과)</span>`;
+                    statusHtml = `<span style="background: rgba(239,68,68,0.1); padding: 2px 4px; border-radius: 4px; color:var(--accent-red); font-weight:bold;">초과</span>`;
                 } else if (totalScanned === item.expected_qty) {
-                    statusHtml = `<span style="color:var(--accent-green); font-weight:bold;">${item.scanned_normal} / ${item.scanned_defective} (완료)</span>`;
+                    statusHtml = `<span style="background: rgba(16,185,129,0.1); padding: 2px 4px; border-radius: 4px; color:var(--accent-green); font-weight:bold;">완료</span>`;
                 } else {
-                    statusHtml = `<span>${item.scanned_normal} / ${item.scanned_defective}</span>`;
+                    statusHtml = `<span style="background: rgba(59,130,246,0.1); padding: 2px 4px; border-radius: 4px; color:var(--accent-blue); font-weight:bold;">진행중</span>`;
                 }
 
                 return `
-                <tr>
-                    <td>${item.product_code}</td>
-                    <td>${item.name}</td>
-                    <td><span style="color:var(--accent-blue); font-weight:bold;">${item.expected_qty}</span>개</td>
-                    <td>${statusHtml}</td>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td style="font-size: 0.85rem;">${item.product_code}</td>
+                    <td style="font-weight: 500; font-size: 0.9rem;">
+                        ${item.name}
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                            목표: <span style="font-weight: bold; color: var(--accent-blue);">${item.expected_qty}</span>개
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="font-size: 0.85rem; margin-bottom: 2px;">
+                            <span style="color:var(--accent-green)">정:${item.scanned_normal}</span> / <span style="color:var(--accent-red)">불:${item.scanned_defective}</span>
+                        </div>
+                        <div style="font-size: 0.75rem;">${statusHtml}</div>
+                    </td>
+                    <td style="text-align: center; color: var(--accent-red); font-weight: bold;">
+                        ${item.fixed_cell || '미배정'}
+                    </td>
                 </tr>
                 `;
             }).join('');
