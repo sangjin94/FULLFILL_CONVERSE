@@ -592,7 +592,7 @@ async function submitScanData() {
 
         if (response.ok) {
             alert(`정상: ${normal}개, 불량: ${defective}개 처리가 완료되었습니다.\n(메모: ${notes ? notes : '없음'})`);
-            loadReturnPlan(currentState.storeName); // 표 새로고침 연동
+            loadReturnPlan(currentState.storeName, currentState.batchName); // 표 새로고침 연동 수정 (batchName 추가)
         } else {
             alert("서버 저장 중 오류가 발생했습니다.");
         }
